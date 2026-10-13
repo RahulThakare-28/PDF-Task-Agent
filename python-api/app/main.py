@@ -8,10 +8,21 @@ from app.schemas import (
     ExploreDirectoryOutput,
     FindFilesInput,
     FindFilesOutput,
+    MoveFileInput,
+    MoveFileOutput,
     ReadFileInput,
     ReadFileOutput,
+    RenameFileInput,
+    RenameFileOutput,
 )
-from app.tools import explore_directory, find_files, read_file, ALLOWED_ROOT
+from app.tools.filesystem import (
+    ALLOWED_ROOT,
+    explore_directory,
+    find_files,
+    move_file,
+    read_file,
+    rename_file,
+)
 
 app = FastAPI(
     title="PDF Task Agent Tools API",
@@ -213,6 +224,192 @@ def read_endpoint_get(
 
 
 # ==============================================================================
+# Tool 4: Rename File (/tools/rename and /tools/rename-file)
+# ==============================================================================
+
+@app.post(
+    "/tools/rename",
+    response_model=RenameFileOutput,
+    summary="Rename File (POST)",
+    tags=["Tools"],
+)
+@app.post(
+    "/tools/rename-file",
+    response_model=RenameFileOutput,
+    include_in_schema=False,
+)
+def rename_endpoint_post(
+    payload: Optional[RenameFileInput] = None,
+    source_path: Optional[str] = Query(default=None, description="Path fallback"),
+    new_name: Optional[str] = Query(default=None, description="New name fallback"),
+    overwrite: Optional[bool] = Query(default=None, description="Overwrite flag fallback"),
+):
+    """Rename a file in an approved directory."""
+    actual_source = (payload.source_path if payload and payload.source_path else None) or source_path or ""
+    actual_new_name = (payload.new_name if payload and payload.new_name else None) or new_name or ""
+    actual_overwrite = (payload.overwrite if payload and payload.overwrite is not None else False) if overwrite is None else overwrite
+
+    if not actual_source:
+        return RenameFileOutput(
+            success=False,
+            source_path="",
+            final_path="",
+            new_name=actual_new_name,
+            error="Missing 'source_path' parameter.",
+        )
+    if not actual_new_name:
+        return RenameFileOutput(
+            success=False,
+            source_path=actual_source,
+            final_path="",
+            new_name="",
+            error="Missing 'new_name' parameter.",
+        )
+
+    result = rename_file(
+        source_path=actual_source,
+        new_name=actual_new_name,
+        overwrite=actual_overwrite,
+    )
+    return result
+
+
+@app.get(
+    "/tools/rename",
+    response_model=RenameFileOutput,
+    summary="Rename File (GET)",
+    tags=["Tools"],
+)
+@app.get(
+    "/tools/rename-file",
+    response_model=RenameFileOutput,
+    include_in_schema=False,
+)
+def rename_endpoint_get(
+    source_path: Optional[str] = Query(default="", description="Path to file to rename"),
+    new_name: Optional[str] = Query(default="", description="New filename or target path"),
+    overwrite: bool = Query(default=False, description="Whether to overwrite existing destination"),
+):
+    """GET variant for renaming a file."""
+    if not source_path:
+        return RenameFileOutput(
+            success=False,
+            source_path="",
+            final_path="",
+            new_name=new_name,
+            error="Missing 'source_path' query parameter.",
+        )
+    if not new_name:
+        return RenameFileOutput(
+            success=False,
+            source_path=source_path,
+            final_path="",
+            new_name="",
+            error="Missing 'new_name' query parameter.",
+        )
+
+    result = rename_file(
+        source_path=source_path,
+        new_name=new_name,
+        overwrite=overwrite,
+    )
+    return result
+
+
+# ==============================================================================
+# Tool 5: Move File (/tools/move and /tools/move-file)
+# ==============================================================================
+
+@app.post(
+    "/tools/move",
+    response_model=MoveFileOutput,
+    summary="Move File (POST)",
+    tags=["Tools"],
+)
+@app.post(
+    "/tools/move-file",
+    response_model=MoveFileOutput,
+    include_in_schema=False,
+)
+def move_endpoint_post(
+    payload: Optional[MoveFileInput] = None,
+    source_path: Optional[str] = Query(default=None, description="Source path fallback"),
+    destination: Optional[str] = Query(default=None, description="Destination fallback"),
+    overwrite: Optional[bool] = Query(default=None, description="Overwrite fallback"),
+):
+    """Move a file to a new location in an approved directory."""
+    actual_source = (payload.source_path if payload and payload.source_path else None) or source_path or ""
+    actual_dest = (payload.destination if payload and payload.destination else None) or destination or ""
+    actual_overwrite = (payload.overwrite if payload and payload.overwrite is not None else False) if overwrite is None else overwrite
+
+    if not actual_source:
+        return MoveFileOutput(
+            success=False,
+            source_path="",
+            destination=actual_dest,
+            final_path="",
+            error="Missing 'source_path' parameter.",
+        )
+    if not actual_dest:
+        return MoveFileOutput(
+            success=False,
+            source_path=actual_source,
+            destination="",
+            final_path="",
+            error="Missing 'destination' parameter.",
+        )
+
+    result = move_file(
+        source_path=actual_source,
+        destination=actual_dest,
+        overwrite=actual_overwrite,
+    )
+    return result
+
+
+@app.get(
+    "/tools/move",
+    response_model=MoveFileOutput,
+    summary="Move File (GET)",
+    tags=["Tools"],
+)
+@app.get(
+    "/tools/move-file",
+    response_model=MoveFileOutput,
+    include_in_schema=False,
+)
+def move_endpoint_get(
+    source_path: Optional[str] = Query(default="", description="Path to file to move"),
+    destination: Optional[str] = Query(default="", description="Destination directory or path"),
+    overwrite: bool = Query(default=False, description="Whether to overwrite existing destination"),
+):
+    """GET variant for moving a file."""
+    if not source_path:
+        return MoveFileOutput(
+            success=False,
+            source_path="",
+            destination=destination or "",
+            final_path="",
+            error="Missing 'source_path' query parameter.",
+        )
+    if not destination:
+        return MoveFileOutput(
+            success=False,
+            source_path=source_path,
+            destination="",
+            final_path="",
+            error="Missing 'destination' query parameter.",
+        )
+
+    result = move_file(
+        source_path=source_path,
+        destination=destination,
+        overwrite=overwrite,
+    )
+    return result
+
+
+# ==============================================================================
 # Tools Manifest Endpoint (Lists all tools and schemas)
 # ==============================================================================
 
@@ -242,5 +439,20 @@ def list_available_tools():
                 "description": "Read text or PDF content from an approved file.",
                 "sample_payload": {"path": "Video script.pdf", "page_number": 1, "max_chars": 2000},
             },
+            {
+                "name": "rename_file",
+                "endpoint": "/tools/rename",
+                "methods": ["POST", "GET"],
+                "description": "Rename a file in an approved directory. Validates paths and prevents overwriting by default.",
+                "sample_payload": {"source_path": "old_name.pdf", "new_name": "new_name.pdf", "overwrite": False},
+            },
+            {
+                "name": "move_file",
+                "endpoint": "/tools/move",
+                "methods": ["POST", "GET"],
+                "description": "Move a file to a new destination inside an approved directory. Validates paths and prevents overwriting by default.",
+                "sample_payload": {"source_path": "report.pdf", "destination": "archive/", "overwrite": False},
+            },
         ]
     }
+
