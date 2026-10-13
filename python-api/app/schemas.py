@@ -78,3 +78,50 @@ class ReadFileOutput(BaseModel):
     size_bytes: Optional[int] = None
     truncated: bool = False
     error: Optional[str] = None
+
+
+class RenameFileInput(BaseModel):
+    source_path: str = Field(
+        ...,
+        description="Path or filename to rename inside the approved directory."
+    )
+    new_name: str = Field(
+        ...,
+        description="New filename (e.g. 'summary_v2.pdf') or target path."
+    )
+    overwrite: bool = Field(
+        default=False,
+        description="Whether to overwrite if destination already exists (default: False)."
+    )
+
+
+class RenameFileOutput(BaseModel):
+    success: bool
+    source_path: str
+    final_path: str = ""
+    new_name: Optional[str] = None
+    error: Optional[str] = None
+
+
+class MoveFileInput(BaseModel):
+    source_path: str = Field(
+        ...,
+        description="Path or filename to move inside the approved directory."
+    )
+    destination: str = Field(
+        ...,
+        description="Destination directory or destination file path inside the approved directory."
+    )
+    overwrite: bool = Field(
+        default=False,
+        description="Whether to overwrite if destination already exists (default: False)."
+    )
+
+
+class MoveFileOutput(BaseModel):
+    success: bool
+    source_path: str
+    destination: str = ""
+    final_path: str = ""
+    error: Optional[str] = None
+
