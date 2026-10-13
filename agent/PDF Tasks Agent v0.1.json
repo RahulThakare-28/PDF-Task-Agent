@@ -1,0 +1,260 @@
+{
+  "name": "PDF Tasks Agent v0.1",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "allowFileUploads": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ab9855d7-5776-416b-8a8d-0ac2b563c3c4",
+      "name": "When chat message received",
+      "webhookId": "45536bba-cfa5-4ce3-a065-b400742b217b"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "f78156fe-17a9-4d83-b283-4ba11f5ca2e2",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "toolDescription": "List files and subdirectories inside the approved folder (defaults to root if path is empty)",
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/tools/explore",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        368,
+        240
+      ],
+      "id": "ebf49a21-04df-41f4-9e92-07564e19bd45",
+      "name": "explore_directory"
+    },
+    {
+      "parameters": {
+        "model": "qwen3.5:4b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        64,
+        256
+      ],
+      "id": "bc356dca-3ba2-44de-8170-80b504965c98",
+      "name": "Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "UNMPKSr1zwuolnvo",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Search for files matching a pattern (e.g. *.pdf, *invoice*, report*.txt) in the directory or its subdirectories. Use to locate specific files or file types.",
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/tools/find",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        528,
+        240
+      ],
+      "id": "505f4920-d6ea-464b-ba7a-487fc57e91bb",
+      "name": "find_files"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Read and extract text from supported files (PDF or text files like .txt, .md, .json, .csv). For PDFs, you can optionally specify page_number.",
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/tools/read",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"path\": \"{{ $fromAI('path', 'The file name or relative path to read, e.g. Video script.pdf') }}\",\n  \"page_number\": {{ $fromAI('page_number', 'Optional 1-based page number for PDF. Null for full file.', 'number') }},\n  \"max_chars\": 4000\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        688,
+        240
+      ],
+      "id": "2111c818-2751-4b0d-9bf7-0d2838baa4dd",
+      "name": "read_file"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Rename a file in the approved directory. Validates both paths, prevents overwriting by default, and returns the final path.",
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/tools/rename",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_path\": \"{{ $fromAI('source_path', 'The file name or path to rename') }}\",\n  \"new_name\": \"{{ $fromAI('new_name', 'The new file name or target path') }}\",\n  \"overwrite\": {{ $fromAI('overwrite', 'Set true to allow replacing an existing destination file. Defaults to false.', 'boolean') }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        848,
+        240
+      ],
+      "id": "e4b2c111-92b0-4613-bc75-9c9e6231aa4e",
+      "name": "rename_file"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Move a file to a new destination folder or path in the approved directory. Validates both paths, prevents overwriting by default, and returns the final path.",
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/tools/move",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_path\": \"{{ $fromAI('source_path', 'The file name or path to move') }}\",\n  \"destination\": \"{{ $fromAI('destination', 'The destination directory or new file path') }}\",\n  \"overwrite\": {{ $fromAI('overwrite', 'Set true to allow replacing an existing destination file. Defaults to false.', 'boolean') }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        1008,
+        240
+      ],
+      "id": "f5c3d222-03c1-4724-ad86-ad0f7342bb5f",
+      "name": "move_file"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 500
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        208,
+        256
+      ],
+      "id": "bf5edc25-f7ff-4e80-b9b9-c45b0121bc9f",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "explore_directory": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "find_files": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_file": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "rename_file": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "move_file": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e888e1c2-90fd-4d09-8f46-d951f3136cfe",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d058517866b853649403c496e73ca688154e434675c239384e592d310202480d"
+  },
+  "nodeGroups": [],
+  "id": "LubWE9Aw2QXvxW9e",
+  "tags": []
+}
